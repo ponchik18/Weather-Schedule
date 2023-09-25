@@ -1,0 +1,35 @@
+<resources>
+    <string name="app_name">Weather Diary</string>
+    <string-array name="menu_names">
+        <item>Refresh</item>
+        <item>Search</item>
+        <item>About</item>
+    </string-array>
+    <string name="description">Our weather forecast and daily planner app allows you to save weather forecasts for your \'memories of the day.\' Keep a weather diary, track various weather metrics for each day, and plan activities based on favorable weather conditions.</string>
+    <string name="version_name">Version 1.0</string>
+    <string name="about_app">About Weather Diary</string>
+    <string name="author_name">Maksim Bovkun</string>
+    <string name="author_photo_link">https://media.licdn.com/dms/image/D5603AQEVTYeSxBxbNA/profile-displayphoto-shrink_800_800/0/1690550062381?e=1699488000&amp;v=beta&amp;t=gd14VemtPINnwpHPM5tQLegRj2woVBnBDVa8CIwSfMA</string>
+    <string name="more">More</string>
+    <string name="favorite">Favorite</string>
+    <string name="search">Search</string>
+    <string name="fact">Fact</string>
+    <string-array name="titles">
+        <item>Author</item>
+        <item>How to contact me?</item>
+        <item>Explore, Plan, and Conquer with Weather Diary</item>
+        <item>Weather Diary: Making Every Day a Good Day</item>
+        <item>Weather Diary - Your Pocket Sunshine</item>
+        <item>Weather Diary: Your Weather-Ready Sidekick</item>
+        <item>Weather Diary: Your Weather Forecast Expert</item>
+    </string-array>
+    <string-array name="descriptions">
+        <item>My name is Maxim Bovkun</item>
+        <item>+375 (33) 222–22–22</item>
+        <item>Weather Diary empowers you to explore new horizons, plan your day, and conquer any weather-related challenges</item>
+        <item>Weather Diary improves your daily experience</item>
+        <item>Get your daily dose of positivity with Weather Diary</item>
+        <item>Weather Diary, your ready-for-anything weather sidekick</item>
+        <item>Weather Diary is the expert you need for precise weather forecasts</item>
+    </string-array>
+</resources>
