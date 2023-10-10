@@ -19,6 +19,7 @@
     <string name="success_edit">Memorable day has been edited successfully!</string>
     <string name="added_sucess">Memorable day has been added successfully!</string>
     <string name="submit">Submit</string>
+    <string name="error">error</string>
     <string-array name="titles">
         <item>Author</item>
         <item>How to contact me?</item>

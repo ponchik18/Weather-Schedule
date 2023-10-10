@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -47,13 +48,13 @@ import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.Checkbox
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DatePicker
 import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.ExposedDropdownMenuDefaults
@@ -77,12 +78,14 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import pmislabs.bovkunmaxim.bsuir.weatherschedule.R
-import pmislabs.bovkunmaxim.bsuir.weatherschedule.data.home.Cloudiness
-import pmislabs.bovkunmaxim.bsuir.weatherschedule.data.home.MemorableDay
-import pmislabs.bovkunmaxim.bsuir.weatherschedule.data.home.Weather
+import pmislabs.bovkunmaxim.bsuir.weatherschedule.data.entity.Cloudiness
+import pmislabs.bovkunmaxim.bsuir.weatherschedule.data.entity.MemorableDay
+import pmislabs.bovkunmaxim.bsuir.weatherschedule.data.entity.Weather
 import pmislabs.bovkunmaxim.bsuir.weatherschedule.ui.screens.AboutScreen
 import pmislabs.bovkunmaxim.bsuir.weatherschedule.ui.screens.HomeScreen
+import pmislabs.bovkunmaxim.bsuir.weatherschedule.ui.state.HomeState
 import pmislabs.bovkunmaxim.bsuir.weatherschedule.ui.theme.WeatherScheduleTheme
+import pmislabs.bovkunmaxim.bsuir.weatherschedule.ui.viewmodel.HomeViewModel
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
@@ -90,7 +93,6 @@ import java.time.format.DateTimeFormatter
 import java.util.Calendar
 import java.util.Date
 import java.util.Locale
-import java.util.UUID
 
 @Composable
 fun WeatherTrackerContent() {
@@ -359,7 +361,7 @@ fun HomeScreenContent(
     onAdd: (MemorableDay, Int) -> Unit,
     snackbarHostState: SnackbarHostState
 ){
-    Box {
+    Box(modifier = Modifier.fillMaxSize()) {
         val sheetState = rememberModalBottomSheetState()
         var selectedMemorableDay by remember { mutableStateOf<MemorableDay?>(null) }
         var isEditing by remember { mutableStateOf(false) }
@@ -636,8 +638,16 @@ fun AddMemorableDay(
         Button(
 
             onClick = {
+                val newMemorableDay: MemorableDay
                 val weather = Weather(temperature, humidity, isRaining, Cloudiness.valueOf(cloudiness.uppercase().replace(' ', '_')) )
-                val newMemorableDay = MemorableDay(description, weather, date)
+                if(memorableDay == null){
+                    newMemorableDay = MemorableDay(description, weather, date)
+                }else {
+                    newMemorableDay = memorableDay.copy()
+                    newMemorableDay.description =  description
+                    newMemorableDay.weather = weather
+                    newMemorableDay.date = date
+                }
                 onAddOrEdit(newMemorableDay, indexToEdit)
                 scope.launch{
                     sheetState.hide()
@@ -653,7 +663,107 @@ fun AddMemorableDay(
             Text(text = stringResource(R.string.submit))
         }
     }
+}
 
+@Composable
+fun RenderState(homeState: HomeState, snackbarHostState: SnackbarHostState, viewModel: HomeViewModel) {
+    when(homeState) {
+        is HomeState.Loading -> Loading()
+        is HomeState.Empty -> Empty(
+            onAdd = viewModel::onClickAddOrEditMemorableDay,
+            snackbarHostState = snackbarHostState)
+        is HomeState.DisplayingMemorableDay -> HomeScreenContent(
+                                memorableDays = homeState.memorableDays,
+                                onAdd = viewModel::onClickAddOrEditMemorableDay,
+                                onRemove = viewModel::onClickRemoveMemorableDay,
+                                snackbarHostState = snackbarHostState
+                            )
+        is HomeState.Error -> FailureDisplay(homeState.e.message)
+    }
+}
+
+@Composable
+fun Loading() {
+    Box(modifier = Modifier
+        .fillMaxSize()
+        .wrapContentSize(Alignment.Center)) {
+        CircularProgressIndicator(color = MaterialTheme.colorScheme.secondary)
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun Empty(
+          onAdd: (MemorableDay, Int) -> Unit,
+          snackbarHostState: SnackbarHostState) {
+    val sheetState = rememberModalBottomSheetState()
+    var selectedMemorableDay by remember { mutableStateOf<MemorableDay?>(null) }
+    var isEditing by remember { mutableStateOf(false) }
+    var textSnackbar by remember { mutableStateOf("") }
+    val scope = rememberCoroutineScope()
+    Box(modifier = Modifier.fillMaxSize()) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(16.dp),
+            verticalArrangement = Arrangement.Center,
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Text(text = "No data available", color = Color.Gray)
+            Spacer(modifier = Modifier.height(16.dp))
+        }
+        FloatingActionButton(
+            content = { Text(text = "+") },
+            onClick = {
+                scope.launch {
+                    delay(1000L);
+                    sheetState.show()
+                    selectedMemorableDay = null
+                    isEditing = false
+                    textSnackbar = "Memorable day has been added successfully!"
+
+                }
+            },
+            modifier = Modifier
+                .padding(16.dp)
+                .align(alignment = Alignment.BottomEnd)
+        )
+        if (sheetState.isVisible) {
+            ModalBottomSheet(
+                sheetState = sheetState,
+                onDismissRequest = {
+                    scope.launch {
+                        sheetState.hide()
+
+                    }
+                },
+            ) {
+                Row(horizontalArrangement = Arrangement.SpaceAround) {
+                    AddMemorableDay(
+                        onAdd, scope, sheetState, snackbarHostState,
+                        stringResource(R.string.added_sucess)
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun FailureDisplay(errorMessage: String?) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(16.dp),
+        verticalArrangement = Arrangement.Center,
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Text(text = errorMessage?:stringResource(R.string.error), color = Color.Red)
+        Spacer(modifier = Modifier.height(16.dp))
+/*        Button(onClick = onRetry) {
+            Text(text = "Retry")
+        }*/
+    }
 }
 
 
