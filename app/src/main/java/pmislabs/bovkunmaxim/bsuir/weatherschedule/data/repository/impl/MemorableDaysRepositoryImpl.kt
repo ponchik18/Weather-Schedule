@@ -2,35 +2,32 @@ package pmislabs.bovkunmaxim.bsuir.weatherschedule.data.repository.impl
 
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flowOf
-import pmislabs.bovkunmaxim.bsuir.weatherschedule.data.datasource.MemorableDaysDataSource
-import pmislabs.bovkunmaxim.bsuir.weatherschedule.data.datasource.impl.InMemoryMemorableDaysDataSource
-import pmislabs.bovkunmaxim.bsuir.weatherschedule.data.entity.MemorableDay
+import pmislabs.bovkunmaxim.bsuir.weatherschedule.data.dao.MemorableDayDao
+import pmislabs.bovkunmaxim.bsuir.weatherschedule.data.domain.MemorableDay
 import pmislabs.bovkunmaxim.bsuir.weatherschedule.data.repository.MemorableDaysRepository
-import java.util.UUID
 
-object MemorableDaysRepositoryImpl : MemorableDaysRepository {
-    private val dataSource: MemorableDaysDataSource = InMemoryMemorableDaysDataSource
-    override fun getMemorableDay(id: UUID?): Flow<MemorableDay?> {
+class MemorableDaysRepositoryImpl(private val dao: MemorableDayDao) : MemorableDaysRepository {
+    override fun getMemorableDay(id: Int?): Flow<MemorableDay?> {
         return if(id == null){
             flowOf(null)
         } else {
-            dataSource.getMemorableDay(id)
+            dao.getById(id)
         }
     }
 
     override fun getAllMemorableDay(): Flow<List<MemorableDay>> {
-        return dataSource.getMemorableDays()
+        return dao.getAll()
     }
 
     override suspend fun save(memorableDay: MemorableDay?) {
         if(memorableDay != null){
-            dataSource.upsert(memorableDay)
+            dao.save(memorableDay)
         }
     }
 
-    override suspend fun delete(id: UUID?) {
+    override suspend fun delete(id: Int?) {
         if(id != null){
-            dataSource.delete(id)
+            dao.delete(id)
         }
     }
 }

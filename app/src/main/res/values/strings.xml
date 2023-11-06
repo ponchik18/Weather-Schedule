@@ -4,6 +4,7 @@
         <item>Home</item>
         <item>Search</item>
         <item>About</item>
+        <item>Weather</item>
     </string-array>
     <string name="description">Our weather forecast and daily planner app allows you to save weather forecasts for your \'memories of the day.\' Keep a weather diary, track various weather metrics for each day, and plan activities based on favorable weather conditions.</string>
     <string name="version_name">Version 1.0</string>

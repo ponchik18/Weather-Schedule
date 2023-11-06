@@ -52,6 +52,8 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Done
 import androidx.compose.material3.Button
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CircularProgressIndicator
@@ -74,18 +76,24 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.navigation.compose.rememberNavController
+import com.google.accompanist.swiperefresh.SwipeRefresh
+import com.google.accompanist.swiperefresh.rememberSwipeRefreshState
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import pmislabs.bovkunmaxim.bsuir.weatherschedule.R
-import pmislabs.bovkunmaxim.bsuir.weatherschedule.data.entity.Cloudiness
-import pmislabs.bovkunmaxim.bsuir.weatherschedule.data.entity.MemorableDay
-import pmislabs.bovkunmaxim.bsuir.weatherschedule.data.entity.Weather
+import pmislabs.bovkunmaxim.bsuir.weatherschedule.data.domain.Daily
+import pmislabs.bovkunmaxim.bsuir.weatherschedule.data.domain.MemorableDay
+import pmislabs.bovkunmaxim.bsuir.weatherschedule.data.domain.Weather
+import pmislabs.bovkunmaxim.bsuir.weatherschedule.data.domain.WeatherType
 import pmislabs.bovkunmaxim.bsuir.weatherschedule.ui.screens.AboutScreen
 import pmislabs.bovkunmaxim.bsuir.weatherschedule.ui.screens.HomeScreen
+import pmislabs.bovkunmaxim.bsuir.weatherschedule.ui.screens.WeatherScreen
 import pmislabs.bovkunmaxim.bsuir.weatherschedule.ui.state.HomeState
+import pmislabs.bovkunmaxim.bsuir.weatherschedule.ui.state.WeatherState
 import pmislabs.bovkunmaxim.bsuir.weatherschedule.ui.theme.WeatherScheduleTheme
 import pmislabs.bovkunmaxim.bsuir.weatherschedule.ui.viewmodel.HomeViewModel
+import pmislabs.bovkunmaxim.bsuir.weatherschedule.ui.viewmodel.WeatherViewModel
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
@@ -93,9 +101,10 @@ import java.time.format.DateTimeFormatter
 import java.util.Calendar
 import java.util.Date
 import java.util.Locale
+import kotlin.reflect.KFunction1
 
 @Composable
-fun WeatherTrackerContent() {
+fun WeatherTrackerContent(homeViewModel: HomeViewModel, weatherViewModel: WeatherViewModel) {
     val navController =  rememberNavController();
 
     WeatherScheduleTheme(
@@ -106,7 +115,7 @@ fun WeatherTrackerContent() {
             modifier = Modifier.fillMaxSize(),
             color = MaterialTheme.colorScheme.background
         ) {
-            AppNavigation(navController = navController)
+            AppNavigation(navController = navController, homeViewModel = homeViewModel, weatherViewModel = weatherViewModel)
         }
     }
 }
@@ -194,7 +203,11 @@ fun HomeTopAppBar(
 }
 
 @Composable
-fun AppNavigation(navController: NavHostController) {
+fun AppNavigation(
+    navController: NavHostController,
+    homeViewModel: HomeViewModel,
+    weatherViewModel: WeatherViewModel
+) {
     val snackbarHostState = remember { SnackbarHostState() }
     Scaffold(
         topBar = {
@@ -215,8 +228,9 @@ fun AppNavigation(navController: NavHostController) {
             NavHost(
                 navController = navController, startDestination = "home"
             ) {
-                composable("home") { HomeScreen(snackbarHostState) }
+                composable("home") { HomeScreen(snackbarHostState, homeViewModel) }
                 composable("about") { AboutScreen() }
+                composable("weather") {WeatherScreen(snackbarHostState, weatherViewModel)}
             }
         }
 
@@ -224,114 +238,6 @@ fun AppNavigation(navController: NavHostController) {
 
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-fun MemorableDayItem(
-    memorableDay: MemorableDay,
-    onRemove: () -> Unit,
-    onEdit: (MemorableDay) -> Unit,
-    sheetState: SheetState,
-    scope: CoroutineScope,
-    snackbarHostState: SnackbarHostState,
-    modifier: Modifier = Modifier,
-    selectedMemorableDay: MemorableDay?,
-    isEditing: Boolean
-){
-    Card(
-        modifier = modifier,
-        shape = RoundedCornerShape(20.dp), elevation = CardDefaults.cardElevation(
-            defaultElevation = 10.dp
-        )
-    ){
-
-            Column(
-                modifier = Modifier.padding(16.dp)
-            ) {
-                Row(modifier = Modifier
-                    .padding(bottom = 2.dp)
-                    .align(alignment = Alignment.CenterHorizontally)) {
-                    val iconId = if (memorableDay.weather.isRaining) R.drawable.baseline_grain_24 else R.drawable.baseline_wb_sunny_24
-                    val formatter = DateTimeFormatter.ofPattern("dd MMM yyyy", Locale.ENGLISH)
-                    val formattedDate = memorableDay.date.format(formatter)
-
-                    Text(
-                        text = formattedDate, // Add date or header text here
-                        style = MaterialTheme.typography.headlineSmall,
-                        textAlign = TextAlign.Center,
-                        modifier = Modifier
-                            .padding(horizontal = 2.dp),
-                        color = MaterialTheme.colorScheme.primary // Header text color
-                    )
-                    Icon(
-                        painter = painterResource(id = iconId),
-                        contentDescription = "",
-                    )
-                }
-                ParameterItem("Temperature: ","${memorableDay.weather.temperature}°C")
-                ParameterItem("Humidity: ","${memorableDay.weather.humidity}%")
-                ParameterItem("Cloudiness: ",memorableDay.weather.cloudiness.cloudiness)
-                Text(
-                    text = "Description Text:",
-                    style = TextStyle(
-                        fontSize = 18.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.primary // Customize the text color
-                    ),
-                    modifier = Modifier.padding(bottom = 2.dp)
-                )
-                Text(
-                    text = memorableDay.description,
-                    style = TextStyle(
-                        fontSize = 16.sp,
-                        lineHeight = 20.sp, // Customize line height for better readability
-                        color = Color.LightGray // Customize the text color
-                    )
-                )
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    IconButton(onClick = {
-
-
-                    }) {
-                        Icon(
-                            imageVector = Icons.Filled.Edit,
-                            contentDescription = stringResource(R.string.edit),
-                        )
-
-                    }
-                    IconButton(onClick = {
-                        onRemove()
-                    }) {
-                        Icon(
-                            imageVector = Icons.Filled.Delete,
-                            contentDescription = stringResource(R.string.delete),
-                        )
-
-                    }
-                }
-            }
-        LaunchedEffect(Unit) {
-
-        }
-        /*if (sheetState.isVisible) {
-
-            ModalBottomSheet(
-                sheetState = sheetState,
-                onDismissRequest = {
-                    scope.launch {
-                        sheetState.hide()
-                    }
-                },
-            ) {
-                Row(horizontalArrangement = Arrangement.SpaceAround) {
-                    AddMemorableDay( onEdit, scope, sheetState, snackbarHostState, memorableDay)
-                }
-            }
-        }*/
-    }
-}
 @Composable
 fun ParameterItem(description: String, mainText:String){
     Row{
@@ -404,8 +310,8 @@ fun HomeScreenContent(
                         )
                     }
                     ParameterItem("Temperature: ","${memorableDay.weather.temperature}°C")
-                    ParameterItem("Humidity: ","${memorableDay.weather.humidity}%")
-                    ParameterItem("Cloudiness: ",memorableDay.weather.cloudiness.cloudiness)
+                    ParameterItem("Wind Speed: ","${memorableDay.weather.windSpeed} km/h")
+                    ParameterItem("Cloudiness: ",memorableDay.weather.cloudiness)
                     Text(
                         text = "Description Text:",
                         style = TextStyle(
@@ -463,58 +369,43 @@ fun HomeScreenContent(
 
         }
     }
-        FloatingActionButton(
-            content = {Text(text="+")},
-            onClick = {
-                scope.launch {
-                    delay(1000L);
-                    sheetState.show()
-                    selectedMemorableDay = null
-                    isEditing = false
-                    textSnackbar = "Memorable day has been added successfully!"
+        if(sheetState.isVisible) {
+            if (isEditing) {
+                ModalBottomSheet(
+                    sheetState = sheetState,
+                    onDismissRequest = {
+                        scope.launch {
+                            sheetState.hide()
 
-                }
-            },
-            modifier = Modifier
-                .padding(16.dp)
-                .align(alignment = Alignment.BottomEnd))
-            if(sheetState.isVisible) {
-                if (isEditing) {
-                    ModalBottomSheet(
-                        sheetState = sheetState,
-                        onDismissRequest = {
-                            scope.launch {
-                                sheetState.hide()
-
-                            }
-                        },
-                    ) {
-                        Row(horizontalArrangement = Arrangement.SpaceAround) {
-                            AddMemorableDay(
-                                onAdd, scope, sheetState, snackbarHostState,
-                                stringResource(R.string.success_edit), selectedMemorableDay, indexToEdit
-                            )
                         }
+                    },
+                ) {
+                    Row(horizontalArrangement = Arrangement.SpaceAround) {
+                        AddMemorableDay(
+                            onAdd, scope, sheetState, snackbarHostState,
+                            stringResource(R.string.success_edit), selectedMemorableDay, indexToEdit
+                        )
                     }
-                } else {
-                    ModalBottomSheet(
-                        sheetState = sheetState,
-                        onDismissRequest = {
-                            scope.launch {
-                                sheetState.hide()
+                }
+            } else {
+                ModalBottomSheet(
+                    sheetState = sheetState,
+                    onDismissRequest = {
+                        scope.launch {
+                            sheetState.hide()
 
-                            }
-                        },
-                    ) {
-                        Row(horizontalArrangement = Arrangement.SpaceAround) {
-                            AddMemorableDay(
-                                onAdd, scope, sheetState, snackbarHostState,
-                                stringResource(R.string.added_sucess)
-                            )
                         }
+                    },
+                ) {
+                    Row(horizontalArrangement = Arrangement.SpaceAround) {
+                        AddMemorableDay(
+                            onAdd, scope, sheetState, snackbarHostState,
+                            stringResource(R.string.added_sucess)
+                        )
                     }
                 }
             }
+        }
     }
 }
 
@@ -531,16 +422,7 @@ fun AddMemorableDay(
     indexToEdit: Int=-1
 ){
     var description by remember { mutableStateOf(memorableDay?.description ?: "") }
-    var temperature by remember { mutableStateOf(memorableDay?.weather?.temperature ?: 0) }
-    var humidity by remember { mutableStateOf(memorableDay?.weather?.humidity ?: 0.0f) }
-    var isRaining by remember { mutableStateOf(memorableDay?.weather?.isRaining ?: false) }
-    var cloudiness by remember { mutableStateOf(memorableDay?.weather?.cloudiness?.cloudiness ?: Cloudiness.CLEAR.cloudiness) }
-    var date by remember { mutableStateOf(memorableDay?.date ?: LocalDate.now()) }
 
-    val calendar = Calendar.getInstance()
-    val datePickerState = rememberDatePickerState(
-        initialSelectedDateMillis = calendar.timeInMillis,
-    )
     //var date by remember { mutableStateOf(memorableDay?.date ?: LocalDate.now()) }
     var expanded by remember { mutableStateOf(false) }
     Column(
@@ -559,96 +441,15 @@ fun AddMemorableDay(
         Spacer(modifier = Modifier.height(16.dp))
 
         // Weather details inputs
-        TextField(
-            value = temperature.toString(),
-            onValueChange = { temperature = it.toIntOrNull() ?: 0 },
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-            label = { Text("Temperature") }
-        )
-
-        Spacer(modifier = Modifier.height(8.dp))
-
-        TextField(
-            value = humidity.toString(),
-            onValueChange = { humidity = it.toFloatOrNull() ?: 0.0f },
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-            label = { Text("Humidity") }
-        )
-
-        Spacer(modifier = Modifier.height(8.dp))
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Checkbox(
-                checked = isRaining,
-                onCheckedChange = { isRaining = it },
-                modifier = Modifier.padding(start = 8.dp),
-            )
-
-            Text(
-                modifier = Modifier.padding(start = 2.dp),
-                text = "Is Raining"
-            )
-        }
-
-        Spacer(modifier = Modifier.height(16.dp))
-
-        ExposedDropdownMenuBox(
-            expanded = expanded,
-            onExpandedChange = {
-                expanded = !expanded
-            }
-        ) {
-            TextField(
-                value = cloudiness,
-                onValueChange = {},
-                readOnly = true,
-                trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
-                modifier = Modifier.menuAnchor()
-            )
-
-            ExposedDropdownMenu(
-                expanded = expanded,
-                onDismissRequest = { expanded = false }
-            ) {
-                Cloudiness.values().map { item->item.cloudiness }.forEach { item ->
-                    DropdownMenuItem(
-                        text = { Text(text = item) },
-                        onClick = {
-                            cloudiness = item
-                            expanded = false
-                        }
-                    )
-                }
-            }
-        }
-
-
-
-        Spacer(modifier = Modifier.height(16.dp))
-
-        // Date picker
-        DatePicker(
-            state = datePickerState,
-            dateValidator = { timestamp ->
-                timestamp <= Instant.now().toEpochMilli()
-            }
-        )
-        Spacer(modifier = Modifier.height(16.dp))
-        date = Date(datePickerState.selectedDateMillis!!).toInstant().atZone(ZoneId.systemDefault()).toLocalDate()
-        // Add button
         Button(
 
             onClick = {
-                val newMemorableDay: MemorableDay
-                val weather = Weather(temperature, humidity, isRaining, Cloudiness.valueOf(cloudiness.uppercase().replace(' ', '_')) )
-                if(memorableDay == null){
-                    newMemorableDay = MemorableDay(description, weather, date)
-                }else {
-                    newMemorableDay = memorableDay.copy()
+
+                if(memorableDay != null){
+                    val newMemorableDay = memorableDay.copy()
                     newMemorableDay.description =  description
-                    newMemorableDay.weather = weather
-                    newMemorableDay.date = date
+                    onAddOrEdit(newMemorableDay, indexToEdit)
                 }
-                onAddOrEdit(newMemorableDay, indexToEdit)
                 scope.launch{
                     sheetState.hide()
                         snackbarHostState.showSnackbar(
@@ -666,12 +467,11 @@ fun AddMemorableDay(
 }
 
 @Composable
-fun RenderState(homeState: HomeState, snackbarHostState: SnackbarHostState, viewModel: HomeViewModel) {
+fun RenderHomeState(homeState: HomeState, snackbarHostState: SnackbarHostState, viewModel: HomeViewModel) {
+
     when(homeState) {
         is HomeState.Loading -> Loading()
-        is HomeState.Empty -> Empty(
-            onAdd = viewModel::onClickAddOrEditMemorableDay,
-            snackbarHostState = snackbarHostState)
+        is HomeState.Empty -> Empty()
         is HomeState.DisplayingMemorableDay -> HomeScreenContent(
                                 memorableDays = homeState.memorableDays,
                                 onAdd = viewModel::onClickAddOrEditMemorableDay,
@@ -679,6 +479,113 @@ fun RenderState(homeState: HomeState, snackbarHostState: SnackbarHostState, view
                                 snackbarHostState = snackbarHostState
                             )
         is HomeState.Error -> FailureDisplay(homeState.e.message)
+    }
+}
+
+@Composable
+fun RenderWeatherState(weatherState: WeatherState, snackbarHostState: SnackbarHostState, viewModel: WeatherViewModel) {
+    val swipeRefreshState = rememberSwipeRefreshState(weatherState is WeatherState.Loading);
+    SwipeRefresh(state = swipeRefreshState, onRefresh = viewModel::updateContent) {
+        when (weatherState) {
+            is WeatherState.Loading -> Loading()
+            is WeatherState.DisplayingDailyWeather -> WeatherScreenContent(
+                daily = weatherState.weatherDays.get(0),
+                memorableDays = weatherState.memorableDays,
+                onAdd = viewModel::onClickAdd,
+                snackbarHostState = snackbarHostState
+            )
+
+            is WeatherState.Error -> FailureDisplay(weatherState.e.message)
+        }
+    }
+}
+
+@Composable
+fun WeatherScreenContent(
+    daily: Daily,
+    snackbarHostState: SnackbarHostState,
+    memorableDays: List<MemorableDay>,
+    onAdd: (MemorableDay) -> Unit
+) {
+
+    LazyColumn {
+        itemsIndexed(daily.temperatureMax) { index, temperatureMax ->
+
+            val iconId =
+                if (daily.rainSum.get(index) == 0.0) R.drawable.baseline_wb_sunny_24 else R.drawable.baseline_grain_24
+            val localDate = LocalDate.parse(daily.time.get(index), DateTimeFormatter.ofPattern("yyyy-MM-dd"))
+            val formatter = DateTimeFormatter.ofPattern("dd MMM yyyy", Locale.ENGLISH)
+            val formattedDate = localDate.format(formatter)
+            val memorableDay = MemorableDay("", Weather(daily.temperatureMax.get(index), daily.windSpeedMax.get(index), daily.rainSum.get(index) == 0.0, WeatherType.fromWMO(daily.weatherCode.get(index)).weatherDesc),localDate, 0 )
+            val isAdded = memorableDays.any { localDate.equals(it.date) }
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(8.dp),
+                shape = RoundedCornerShape(20.dp), elevation = CardDefaults.cardElevation(
+                    defaultElevation = 10.dp
+                )
+            ) {
+                Column(
+                    modifier = Modifier.padding(16.dp)
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .padding(bottom = 2.dp)
+                            .align(alignment = Alignment.CenterHorizontally)
+                    ) {
+                        Text(
+                            text = formattedDate, // Add date or header text here
+                            style = MaterialTheme.typography.headlineSmall,
+                            textAlign = TextAlign.Center,
+                            modifier = Modifier
+                                .padding(horizontal = 2.dp),
+                            color = MaterialTheme.colorScheme.primary // Header text color
+                        )
+                        Icon(
+                            painter = painterResource(id = iconId),
+                            contentDescription = "",
+                        )
+                    }
+                    ParameterItem("Temperature: ", "${daily.temperatureMax.get(index)}°C")
+                    ParameterItem("Weather Type: ", "${WeatherType.fromWMO(daily.weatherCode.get(index)).weatherDesc}")
+                    //ParameterItem("Cloudiness: ",memorableDay.weather.cloudiness.cloudiness)
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        ParameterItem("Max wind speed's: ", "${daily.windSpeedMax.get(index)}km/h")
+                        if (isAdded) {
+                            Icon(
+                                imageVector = Icons.Filled.Done,
+                                contentDescription = stringResource(R.string.delete),
+                            )
+                        } else {
+                            IconButton(onClick = {
+//                                scope.launch {
+//                                    sheetState.show()
+//                                    isEditing = true
+//                                    indexToEdit = index
+//                                    selectedMemorableDay = memorableDay
+//                                    textSnackbar = "Memorable day has been added successfully!"
+//
+//                                }
+//                                isEditing = true
+//                                selectedMemorableDay = memorableDay
+//                            textSnackbar ="Memorable day has been edited successfully!";
+                                onAdd(memorableDay)
+                            }) {
+                                Icon(
+                                    imageVector = Icons.Filled.Add,
+                                    contentDescription = stringResource(R.string.edit),
+                                )
+
+                            }
+                        }
+                    }
+                }
+            }
+        }
     }
 }
 
@@ -691,16 +598,8 @@ fun Loading() {
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun Empty(
-          onAdd: (MemorableDay, Int) -> Unit,
-          snackbarHostState: SnackbarHostState) {
-    val sheetState = rememberModalBottomSheetState()
-    var selectedMemorableDay by remember { mutableStateOf<MemorableDay?>(null) }
-    var isEditing by remember { mutableStateOf(false) }
-    var textSnackbar by remember { mutableStateOf("") }
-    val scope = rememberCoroutineScope()
+fun Empty() {
     Box(modifier = Modifier.fillMaxSize()) {
         Column(
             modifier = Modifier
@@ -711,40 +610,6 @@ fun Empty(
         ) {
             Text(text = "No data available", color = Color.Gray)
             Spacer(modifier = Modifier.height(16.dp))
-        }
-        FloatingActionButton(
-            content = { Text(text = "+") },
-            onClick = {
-                scope.launch {
-                    delay(1000L);
-                    sheetState.show()
-                    selectedMemorableDay = null
-                    isEditing = false
-                    textSnackbar = "Memorable day has been added successfully!"
-
-                }
-            },
-            modifier = Modifier
-                .padding(16.dp)
-                .align(alignment = Alignment.BottomEnd)
-        )
-        if (sheetState.isVisible) {
-            ModalBottomSheet(
-                sheetState = sheetState,
-                onDismissRequest = {
-                    scope.launch {
-                        sheetState.hide()
-
-                    }
-                },
-            ) {
-                Row(horizontalArrangement = Arrangement.SpaceAround) {
-                    AddMemorableDay(
-                        onAdd, scope, sheetState, snackbarHostState,
-                        stringResource(R.string.added_sucess)
-                    )
-                }
-            }
         }
     }
 }
@@ -760,9 +625,7 @@ fun FailureDisplay(errorMessage: String?) {
     ) {
         Text(text = errorMessage?:stringResource(R.string.error), color = Color.Red)
         Spacer(modifier = Modifier.height(16.dp))
-/*        Button(onClick = onRetry) {
-            Text(text = "Retry")
-        }*/
+
     }
 }
 

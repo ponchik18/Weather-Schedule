@@ -1,8 +1,17 @@
+
 @Suppress("DSL_SCOPE_VIOLATION") // TODO: Remove once KTIJ-19369 is fixed
 plugins {
     alias(libs.plugins.com.android.application)
     alias(libs.plugins.org.jetbrains.kotlin.android)
     alias(libs.plugins.com.google.devtools.ksp)
+    alias(libs.plugins.kotlin.plugin.serialization)
+    kotlin("kapt")
+
+}
+ksp {
+    arg("room.schemaLocation", "$projectDir/schema")
+    arg("room.incremental", "true")
+    arg("room.expandProjection", "true")
 }
 
 android {
@@ -31,6 +40,7 @@ android {
             )
         }
     }
+
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_1_8
         targetCompatibility = JavaVersion.VERSION_1_8
@@ -73,11 +83,37 @@ dependencies {
     implementation(libs.material3)
     implementation(libs.lifecycle.runtime.compose)
 
+    /** New dependencies
+     */
+    implementation(libs.room.runtime)
+    annotationProcessor  (libs.room.compiler)
+    kapt(libs.room.compiler)
+    //ksp (libs.room.compiler)
+    implementation(libs.room.ktx)
+    implementation(libs.room.paging)
+    implementation(libs.room.ktx)
+    implementation(libs.room.paging)
+    implementation(libs.room.ktx)
+    implementation(libs.room.paging)
+    implementation(libs.kotlinx.serialization.json)
+    implementation(libs.ktor.client.auth)
+    implementation(libs.ktor.client.android)
+    implementation(libs.ktor.client.content.negotiation)
+    implementation(libs.ktor.client.cio)
+    implementation(libs.ktor.client.logging)
+    implementation(libs.ktor.client.core)
+    implementation(libs.ktor.client.json)
+    implementation(libs.ktor.client.serialization)
+    implementation(libs.ktor.utils)
+    implementation(libs.accompanist.swiperefresh)
+    /**
+     * End of add new dependencies
+     */
     implementation(libs.core)
     implementation(libs.ksp)
     implementation(libs.navigation.compose)
     implementation(libs.accompanist.navigation.material)
-    implementation(libs.material)
+
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.test.ext.junit)
     androidTestImplementation(libs.espresso.core)

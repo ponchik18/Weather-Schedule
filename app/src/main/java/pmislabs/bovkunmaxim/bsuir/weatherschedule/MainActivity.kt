@@ -7,9 +7,10 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Call
 import androidx.compose.material.icons.filled.Face
 import androidx.compose.material.icons.filled.Star
-import androidx.compose.runtime.Composable
-import androidx.compose.ui.tooling.preview.Preview
+import org.koin.androidx.viewmodel.ext.android.getViewModel
 import pmislabs.bovkunmaxim.bsuir.weatherschedule.ui.components.WeatherTrackerContent
+import pmislabs.bovkunmaxim.bsuir.weatherschedule.ui.viewmodel.HomeViewModel
+import pmislabs.bovkunmaxim.bsuir.weatherschedule.ui.viewmodel.WeatherViewModel
 
 class MainActivity : ComponentActivity() {
 
@@ -27,15 +28,17 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        val homeViewModel =  getViewModel<HomeViewModel>()
+        val weatherViewModel =  getViewModel<WeatherViewModel>()
         setContent {
-            WeatherTrackerContent()
+            WeatherTrackerContent(homeViewModel, weatherViewModel)
         }
     }
 }
 
 
-@Preview(showBackground = true)
+/*@Preview(showBackground = true)
 @Composable
 fun AboutScreenPreview() {
-    WeatherTrackerContent()
-}
+    WeatherTrackerContent(homeViewModel)
+}*/

@@ -1,6 +1,6 @@
 package pmislabs.bovkunmaxim.bsuir.weatherschedule.ui.state
 
-import pmislabs.bovkunmaxim.bsuir.weatherschedule.data.entity.MemorableDay
+import pmislabs.bovkunmaxim.bsuir.weatherschedule.data.domain.MemorableDay
 
 sealed interface HomeState {
     data object Loading : HomeState
