@@ -12,74 +12,63 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Done
 import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SheetState
+import androidx.compose.material3.SnackbarDuration
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextField
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringArrayResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
-import androidx.compose.foundation.lazy.itemsIndexed
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Done
-import androidx.compose.material3.Button
-import androidx.compose.material3.Checkbox
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.DatePicker
-import androidx.compose.material3.ExposedDropdownMenuBox
-import androidx.compose.material3.ExposedDropdownMenuDefaults
-import androidx.compose.material3.FloatingActionButton
-import androidx.compose.material3.ModalBottomSheet
-import androidx.compose.material3.SheetState
-import androidx.compose.material3.SnackbarDuration
-import androidx.compose.material3.SnackbarHost
-import androidx.compose.material3.SnackbarHostState
-import androidx.compose.material3.TextField
-import androidx.compose.material3.rememberDatePickerState
-import androidx.compose.material3.rememberModalBottomSheetState
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.text.style.TextAlign
 import androidx.navigation.compose.rememberNavController
 import com.google.accompanist.swiperefresh.SwipeRefresh
 import com.google.accompanist.swiperefresh.rememberSwipeRefreshState
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import pmislabs.bovkunmaxim.bsuir.weatherschedule.R
 import pmislabs.bovkunmaxim.bsuir.weatherschedule.data.domain.Daily
@@ -88,24 +77,29 @@ import pmislabs.bovkunmaxim.bsuir.weatherschedule.data.domain.Weather
 import pmislabs.bovkunmaxim.bsuir.weatherschedule.data.domain.WeatherType
 import pmislabs.bovkunmaxim.bsuir.weatherschedule.ui.screens.AboutScreen
 import pmislabs.bovkunmaxim.bsuir.weatherschedule.ui.screens.HomeScreen
+import pmislabs.bovkunmaxim.bsuir.weatherschedule.ui.screens.MemorableDayScreen
 import pmislabs.bovkunmaxim.bsuir.weatherschedule.ui.screens.WeatherScreen
 import pmislabs.bovkunmaxim.bsuir.weatherschedule.ui.state.HomeState
 import pmislabs.bovkunmaxim.bsuir.weatherschedule.ui.state.WeatherState
 import pmislabs.bovkunmaxim.bsuir.weatherschedule.ui.theme.WeatherScheduleTheme
 import pmislabs.bovkunmaxim.bsuir.weatherschedule.ui.viewmodel.HomeViewModel
+import pmislabs.bovkunmaxim.bsuir.weatherschedule.ui.viewmodel.MemorableDayDetailViewModel
+import pmislabs.bovkunmaxim.bsuir.weatherschedule.ui.viewmodel.MemorableDayEvent
+import pmislabs.bovkunmaxim.bsuir.weatherschedule.ui.viewmodel.MemorableDayIntent
+import pmislabs.bovkunmaxim.bsuir.weatherschedule.ui.viewmodel.MemorableDayState
 import pmislabs.bovkunmaxim.bsuir.weatherschedule.ui.viewmodel.WeatherViewModel
-import java.time.Instant
+import pmislabs.bovkunmaxim.bsuir.weatherschedule.ui.viewmodel.subscribe
 import java.time.LocalDate
-import java.time.ZoneId
 import java.time.format.DateTimeFormatter
-import java.util.Calendar
-import java.util.Date
 import java.util.Locale
-import kotlin.reflect.KFunction1
 
 @Composable
-fun WeatherTrackerContent(homeViewModel: HomeViewModel, weatherViewModel: WeatherViewModel) {
-    val navController =  rememberNavController();
+fun WeatherTrackerContent(
+    homeViewModel: HomeViewModel,
+    weatherViewModel: WeatherViewModel,
+    memorableDayDetailViewModel: MemorableDayDetailViewModel
+) {
+    val navController = rememberNavController()
 
     WeatherScheduleTheme(
         dynamicColor = true
@@ -115,7 +109,12 @@ fun WeatherTrackerContent(homeViewModel: HomeViewModel, weatherViewModel: Weathe
             modifier = Modifier.fillMaxSize(),
             color = MaterialTheme.colorScheme.background
         ) {
-            AppNavigation(navController = navController, homeViewModel = homeViewModel, weatherViewModel = weatherViewModel)
+            AppNavigation(
+                navController = navController,
+                homeViewModel = homeViewModel,
+                weatherViewModel = weatherViewModel,
+                memorableDayDetailViewModel = memorableDayDetailViewModel
+            )
         }
     }
 }
@@ -206,16 +205,16 @@ fun HomeTopAppBar(
 fun AppNavigation(
     navController: NavHostController,
     homeViewModel: HomeViewModel,
-    weatherViewModel: WeatherViewModel
+    weatherViewModel: WeatherViewModel,
+    memorableDayDetailViewModel: MemorableDayDetailViewModel
 ) {
     val snackbarHostState = remember { SnackbarHostState() }
+    val scope = rememberCoroutineScope()
     Scaffold(
         topBar = {
             HomeTopAppBar(modifier = Modifier.fillMaxWidth(), navController = navController)
         },
-        snackbarHost = {
-            SnackbarHost(hostState = snackbarHostState)
-        },
+        snackbarHost = {  SnackbarHost(hostState = snackbarHostState) },
 
 
         ) { paddingValues ->
@@ -228,9 +227,21 @@ fun AppNavigation(
             NavHost(
                 navController = navController, startDestination = "home"
             ) {
-                composable("home") { HomeScreen(snackbarHostState, homeViewModel) }
+                composable("home") { HomeScreen(snackbarHostState, homeViewModel, navController,scope) }
                 composable("about") { AboutScreen() }
-                composable("weather") {WeatherScreen(snackbarHostState, weatherViewModel)}
+                composable("weather") { WeatherScreen(snackbarHostState, weatherViewModel, scope) }
+                composable("memorableDay/{id}") { navBackStackEntry ->
+                    val id = navBackStackEntry.arguments?.getString("id")
+                    if (id != null) {
+                        MemorableDayScreen(
+                            snackbarHostState,
+                            memorableDayDetailViewModel,
+                            id.toInt(),
+                            navController,
+                            scope
+                        )
+                    }
+                }
             }
         }
 
@@ -239,8 +250,8 @@ fun AppNavigation(
 }
 
 @Composable
-fun ParameterItem(description: String, mainText:String){
-    Row{
+fun ParameterItem(description: String, mainText: String) {
+    Row {
         Text(
             text = description,
             style = TextStyle(
@@ -265,8 +276,9 @@ fun HomeScreenContent(
     memorableDays: List<MemorableDay>,
     onRemove: (MemorableDay) -> Unit,
     onAdd: (MemorableDay, Int) -> Unit,
-    snackbarHostState: SnackbarHostState
-){
+    snackbarHostState: SnackbarHostState,
+    navController: NavHostController
+) {
     Box(modifier = Modifier.fillMaxSize()) {
         val sheetState = rememberModalBottomSheetState()
         var selectedMemorableDay by remember { mutableStateOf<MemorableDay?>(null) }
@@ -275,101 +287,91 @@ fun HomeScreenContent(
         var textSnackbar by remember { mutableStateOf("") }
         val scope = rememberCoroutineScope()
 
-    LazyColumn {
-        itemsIndexed(memorableDays){ index, memorableDay->
-            Card(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(8.dp),
-                shape = RoundedCornerShape(20.dp), elevation = CardDefaults.cardElevation(
-                    defaultElevation = 10.dp
-                )
-            ){
-
-                Column(
-                    modifier = Modifier.padding(16.dp)
+        LazyColumn {
+            itemsIndexed(memorableDays) { index, memorableDay ->
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(8.dp),
+                    shape = RoundedCornerShape(20.dp), elevation = CardDefaults.cardElevation(
+                        defaultElevation = 10.dp
+                    )
                 ) {
-                    Row(modifier = Modifier
-                        .padding(bottom = 2.dp)
-                        .align(alignment = Alignment.CenterHorizontally)) {
-                        val iconId = if (memorableDay.weather.isRaining) R.drawable.baseline_grain_24 else R.drawable.baseline_wb_sunny_24
-                        val formatter = DateTimeFormatter.ofPattern("dd MMM yyyy", Locale.ENGLISH)
-                        val formattedDate = memorableDay.date.format(formatter)
 
-                        Text(
-                            text = formattedDate, // Add date or header text here
-                            style = MaterialTheme.typography.headlineSmall,
-                            textAlign = TextAlign.Center,
-                            modifier = Modifier
-                                .padding(horizontal = 2.dp),
-                            color = MaterialTheme.colorScheme.primary // Header text color
-                        )
-                        Icon(
-                            painter = painterResource(id = iconId),
-                            contentDescription = "",
-                        )
-                    }
-                    ParameterItem("Temperature: ","${memorableDay.weather.temperature}°C")
-                    ParameterItem("Wind Speed: ","${memorableDay.weather.windSpeed} km/h")
-                    ParameterItem("Cloudiness: ",memorableDay.weather.cloudiness)
-                    Text(
-                        text = "Description Text:",
-                        style = TextStyle(
-                            fontSize = 18.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.primary // Customize the text color
-                        ),
-                        modifier = Modifier.padding(bottom = 2.dp)
-                    )
-                    Text(
-                        text = memorableDay.description,
-                        style = TextStyle(
-                            fontSize = 16.sp,
-                            lineHeight = 20.sp, // Customize line height for better readability
-                            color = Color.LightGray // Customize the text color
-                        )
-                    )
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween
+                    Column(
+                        modifier = Modifier.padding(16.dp)
                     ) {
-                        IconButton(onClick = {
-                            scope.launch {
-                                sheetState.show()
-                                isEditing = true
-                                indexToEdit = index
-                                selectedMemorableDay = memorableDay
-                                textSnackbar = "Memorable day has been added successfully!"
+                        Row(
+                            modifier = Modifier
+                                .padding(bottom = 2.dp)
+                                .align(alignment = Alignment.CenterHorizontally)
+                        ) {
+                            val iconId =
+                                if (memorableDay.weather.isRaining) R.drawable.baseline_grain_24 else R.drawable.baseline_wb_sunny_24
+                            val formatter =
+                                DateTimeFormatter.ofPattern("dd MMM yyyy", Locale.ENGLISH)
+                            val formattedDate = memorableDay.date.format(formatter)
+
+                            Text(
+                                text = formattedDate, // Add date or header text here
+                                style = MaterialTheme.typography.headlineSmall,
+                                textAlign = TextAlign.Center,
+                                modifier = Modifier
+                                    .padding(horizontal = 2.dp),
+                                color = MaterialTheme.colorScheme.primary // Header text color
+                            )
+                            Icon(
+                                painter = painterResource(id = iconId),
+                                contentDescription = "",
+                            )
+                        }
+                        ParameterItem("Temperature: ", "${memorableDay.weather.temperature}°C")
+                        ParameterItem("Wind Speed: ", "${memorableDay.weather.windSpeed} km/h")
+                        ParameterItem("Cloudiness: ", memorableDay.weather.cloudiness)
+                        Text(
+                            text = "Description Text:",
+                            style = TextStyle(
+                                fontSize = 18.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.primary // Customize the text color
+                            ),
+                            modifier = Modifier.padding(bottom = 2.dp)
+                        )
+                        Text(
+                            text = memorableDay.description,
+                            style = TextStyle(
+                                fontSize = 16.sp,
+                                lineHeight = 20.sp, // Customize line height for better readability
+                                color = Color.LightGray // Customize the text color
+                            )
+                        )
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            IconButton(onClick = {
+                                navController.navigate(
+                                    "memorableDay/{id}"
+                                        .replace(
+                                            oldValue = "{id}",
+                                            newValue = "${memorableDay.id}"
+                                        )
+                                )
+                            }) {
+                                Icon(
+                                    imageVector = Icons.Filled.MoreVert,
+                                    contentDescription = stringResource(R.string.more_function),
+                                )
 
                             }
-                            isEditing = true
-                            selectedMemorableDay = memorableDay
-//                            textSnackbar ="Memorable day has been edited successfully!";
-
-                        }) {
-                            Icon(
-                                imageVector = Icons.Filled.Edit,
-                                contentDescription = stringResource(R.string.edit),
-                            )
-
-                        }
-                        IconButton(onClick = {
-                            onRemove(memorableDay)
-                        }) {
-                            Icon(
-                                imageVector = Icons.Filled.Delete,
-                                contentDescription = stringResource(R.string.delete),
-                            )
-
                         }
                     }
                 }
+
+
             }
-
-
         }
-    }
-        if(sheetState.isVisible) {
+        if (sheetState.isVisible) {
             if (isEditing) {
                 ModalBottomSheet(
                     sheetState = sheetState,
@@ -418,9 +420,9 @@ fun AddMemorableDay(
     sheetState: SheetState,
     snackbarHostState: SnackbarHostState,
     textSnackbar: String,
-    memorableDay: MemorableDay?= null,
-    indexToEdit: Int=-1
-){
+    memorableDay: MemorableDay? = null,
+    indexToEdit: Int = -1
+) {
     var description by remember { mutableStateOf(memorableDay?.description ?: "") }
 
     //var date by remember { mutableStateOf(memorableDay?.date ?: LocalDate.now()) }
@@ -445,17 +447,17 @@ fun AddMemorableDay(
 
             onClick = {
 
-                if(memorableDay != null){
+                if (memorableDay != null) {
                     val newMemorableDay = memorableDay.copy()
-                    newMemorableDay.description =  description
+                    newMemorableDay.description = description
                     onAddOrEdit(newMemorableDay, indexToEdit)
                 }
-                scope.launch{
+                scope.launch {
                     sheetState.hide()
-                        snackbarHostState.showSnackbar(
-                            message = textSnackbar,
-                            duration = SnackbarDuration.Short
-                        )
+                    snackbarHostState.showSnackbar(
+                        message = textSnackbar,
+                        duration = SnackbarDuration.Short
+                    )
                 }
 
             },
@@ -467,24 +469,168 @@ fun AddMemorableDay(
 }
 
 @Composable
-fun RenderHomeState(homeState: HomeState, snackbarHostState: SnackbarHostState, viewModel: HomeViewModel) {
+fun RenderMemorableDayDetailState(
+    memorableDayState: MemorableDayState,
+    snackbarHostState: SnackbarHostState,
+    viewModel: MemorableDayDetailViewModel,
+    navController: NavHostController,
+    scope: CoroutineScope
+) {
+    when (memorableDayState) {
+        is MemorableDayState.Loading -> Loading()
+        is MemorableDayState.Error -> FailureDisplay(memorableDayState.e.message)
+        is MemorableDayState.RedirectToHome -> {
+            navController.navigate("home")
+        }
 
-    when(homeState) {
+        is MemorableDayState.DisplayMemorableDay -> MemorableDayContent(
+            memorableDay = memorableDayState.memorableDay,
+            viewModel = viewModel,
+            snackbarHostState = snackbarHostState,
+            navController = navController
+        )
+    }
+    viewModel.subscribe { event ->
+        when (event) {
+            is MemorableDayEvent.UpdatedMemorableDay -> {
+                scope.launch {
+                    snackbarHostState.showSnackbar(
+                        message = "Updated successfully!",
+                        duration = SnackbarDuration.Short
+                    )
+                }
+            }
+            is MemorableDayEvent.DeletedMemorableDay -> {
+                scope.launch {
+                    snackbarHostState.showSnackbar(
+                        message = "Deleted successfully!",
+                        duration = SnackbarDuration.Short
+                    )
+                }
+            }
+        }
+
+    }
+}
+
+@Composable
+fun MemorableDayContent(
+    memorableDay: MemorableDay,
+    viewModel: MemorableDayDetailViewModel,
+    snackbarHostState: SnackbarHostState,
+    navController: NavHostController
+) {
+    var description by remember { mutableStateOf(memorableDay.description) }
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(8.dp),
+        shape = RoundedCornerShape(20.dp), elevation = CardDefaults.cardElevation(
+            defaultElevation = 10.dp
+        )
+    ) {
+
+        Column(
+            modifier = Modifier.padding(16.dp)
+        ) {
+            Row(
+                modifier = Modifier
+                    .padding(bottom = 2.dp)
+                    .align(alignment = Alignment.CenterHorizontally)
+            ) {
+                val iconId =
+                    if (memorableDay.weather.isRaining) R.drawable.baseline_grain_24 else R.drawable.baseline_wb_sunny_24
+                val formatter = DateTimeFormatter.ofPattern("dd MMM yyyy", Locale.ENGLISH)
+                val formattedDate = memorableDay.date.format(formatter)
+
+                Text(
+                    text = formattedDate, // Add date or header text here
+                    style = MaterialTheme.typography.headlineSmall,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier
+                        .padding(horizontal = 2.dp),
+                    color = MaterialTheme.colorScheme.primary // Header text color
+                )
+                Icon(
+                    painter = painterResource(id = iconId),
+                    contentDescription = "",
+                )
+            }
+            ParameterItem("Temperature: ", "${memorableDay.weather.temperature}°C")
+            ParameterItem("Wind Speed: ", "${memorableDay.weather.windSpeed} km/h")
+            ParameterItem("Cloudiness: ", memorableDay.weather.cloudiness)
+            Text(
+                text = "Description Text:",
+                style = TextStyle(
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.primary // Customize the text color
+                ),
+                modifier = Modifier.padding(bottom = 2.dp)
+            )
+            TextField(
+                value = description,
+                onValueChange = { description = it },
+            )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                IconButton(onClick = {
+                    viewModel.intent(MemorableDayIntent.DeleteMemorableDay(memorableDay.id))
+                }) {
+                    Icon(
+                        imageVector = Icons.Filled.Delete,
+                        contentDescription = stringResource(R.string.delete),
+                    )
+
+                }
+            }
+            Button(
+
+                onClick = {
+                    memorableDay.description = description
+                    viewModel.intent(MemorableDayIntent.UpdateMemorableDay(memorableDay))
+                },
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text(text = stringResource(R.string.submit))
+            }
+        }
+    }
+}
+
+@Composable
+fun RenderHomeState(
+    homeState: HomeState,
+    snackbarHostState: SnackbarHostState,
+    viewModel: HomeViewModel,
+    navController: NavHostController
+) {
+
+    when (homeState) {
         is HomeState.Loading -> Loading()
         is HomeState.Empty -> Empty()
         is HomeState.DisplayingMemorableDay -> HomeScreenContent(
-                                memorableDays = homeState.memorableDays,
-                                onAdd = viewModel::onClickAddOrEditMemorableDay,
-                                onRemove = viewModel::onClickRemoveMemorableDay,
-                                snackbarHostState = snackbarHostState
-                            )
+            memorableDays = homeState.memorableDays,
+            onAdd = viewModel::onClickAddOrEditMemorableDay,
+            onRemove = viewModel::onClickRemoveMemorableDay,
+            snackbarHostState = snackbarHostState,
+            navController = navController
+        )
+
         is HomeState.Error -> FailureDisplay(homeState.e.message)
     }
 }
 
 @Composable
-fun RenderWeatherState(weatherState: WeatherState, snackbarHostState: SnackbarHostState, viewModel: WeatherViewModel) {
-    val swipeRefreshState = rememberSwipeRefreshState(weatherState is WeatherState.Loading);
+fun RenderWeatherState(
+    weatherState: WeatherState,
+    snackbarHostState: SnackbarHostState,
+    viewModel: WeatherViewModel,
+    scope: CoroutineScope
+) {
+    val swipeRefreshState = rememberSwipeRefreshState(weatherState is WeatherState.Loading)
     SwipeRefresh(state = swipeRefreshState, onRefresh = viewModel::updateContent) {
         when (weatherState) {
             is WeatherState.Loading -> Loading()
@@ -492,7 +638,8 @@ fun RenderWeatherState(weatherState: WeatherState, snackbarHostState: SnackbarHo
                 daily = weatherState.weatherDays.get(0),
                 memorableDays = weatherState.memorableDays,
                 onAdd = viewModel::onClickAdd,
-                snackbarHostState = snackbarHostState
+                snackbarHostState = snackbarHostState,
+                scope = scope
             )
 
             is WeatherState.Error -> FailureDisplay(weatherState.e.message)
@@ -505,7 +652,8 @@ fun WeatherScreenContent(
     daily: Daily,
     snackbarHostState: SnackbarHostState,
     memorableDays: List<MemorableDay>,
-    onAdd: (MemorableDay) -> Unit
+    onAdd: (MemorableDay) -> Unit,
+    scope: CoroutineScope
 ) {
 
     LazyColumn {
@@ -513,10 +661,23 @@ fun WeatherScreenContent(
 
             val iconId =
                 if (daily.rainSum.get(index) == 0.0) R.drawable.baseline_wb_sunny_24 else R.drawable.baseline_grain_24
-            val localDate = LocalDate.parse(daily.time.get(index), DateTimeFormatter.ofPattern("yyyy-MM-dd"))
+            val localDate = LocalDate.parse(
+                daily.time.get(index),
+                DateTimeFormatter.ofPattern("yyyy-MM-dd")
+            )
             val formatter = DateTimeFormatter.ofPattern("dd MMM yyyy", Locale.ENGLISH)
             val formattedDate = localDate.format(formatter)
-            val memorableDay = MemorableDay("", Weather(daily.temperatureMax.get(index), daily.windSpeedMax.get(index), daily.rainSum.get(index) == 0.0, WeatherType.fromWMO(daily.weatherCode.get(index)).weatherDesc),localDate, 0 )
+            val memorableDay = MemorableDay(
+                "",
+                Weather(
+                    daily.temperatureMax.get(index),
+                    daily.windSpeedMax.get(index),
+                    daily.rainSum.get(index) == 0.0,
+                    WeatherType.fromWMO(daily.weatherCode.get(index)).weatherDesc
+                ),
+                localDate,
+                0
+            )
             val isAdded = memorableDays.any { localDate.equals(it.date) }
             Card(
                 modifier = Modifier
@@ -548,13 +709,19 @@ fun WeatherScreenContent(
                         )
                     }
                     ParameterItem("Temperature: ", "${daily.temperatureMax.get(index)}°C")
-                    ParameterItem("Weather Type: ", "${WeatherType.fromWMO(daily.weatherCode.get(index)).weatherDesc}")
+                    ParameterItem(
+                        "Weather Type: ",
+                        "${WeatherType.fromWMO(daily.weatherCode.get(index)).weatherDesc}"
+                    )
                     //ParameterItem("Cloudiness: ",memorableDay.weather.cloudiness.cloudiness)
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
-                        ParameterItem("Max wind speed's: ", "${daily.windSpeedMax.get(index)}km/h")
+                        ParameterItem(
+                            "Max wind speed's: ",
+                            "${daily.windSpeedMax.get(index)}km/h"
+                        )
                         if (isAdded) {
                             Icon(
                                 imageVector = Icons.Filled.Done,
@@ -591,9 +758,11 @@ fun WeatherScreenContent(
 
 @Composable
 fun Loading() {
-    Box(modifier = Modifier
-        .fillMaxSize()
-        .wrapContentSize(Alignment.Center)) {
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .wrapContentSize(Alignment.Center)
+    ) {
         CircularProgressIndicator(color = MaterialTheme.colorScheme.secondary)
     }
 }
@@ -623,10 +792,11 @@ fun FailureDisplay(errorMessage: String?) {
         verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Text(text = errorMessage?:stringResource(R.string.error), color = Color.Red)
+        Text(text = errorMessage ?: stringResource(R.string.error), color = Color.Red)
         Spacer(modifier = Modifier.height(16.dp))
 
     }
 }
+
 
 

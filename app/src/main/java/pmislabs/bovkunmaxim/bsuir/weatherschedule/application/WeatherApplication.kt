@@ -17,18 +17,12 @@ import pmislabs.bovkunmaxim.bsuir.weatherschedule.data.network.WeatherRepository
 import pmislabs.bovkunmaxim.bsuir.weatherschedule.data.repository.MemorableDaysRepository
 import pmislabs.bovkunmaxim.bsuir.weatherschedule.data.repository.impl.MemorableDaysRepositoryImpl
 import pmislabs.bovkunmaxim.bsuir.weatherschedule.ui.viewmodel.HomeViewModel
+import pmislabs.bovkunmaxim.bsuir.weatherschedule.ui.viewmodel.MemorableDayDetailViewModel
 import pmislabs.bovkunmaxim.bsuir.weatherschedule.ui.viewmodel.WeatherViewModel
 
 class WeatherApplication : Application() {
     override fun onCreate() {
         super.onCreate()
-        fun AppDatabase(context: Context): AppDatabase = Room.databaseBuilder(
-            context,
-            AppDatabase::class.java,
-            "weather_database"
-        )
-            .fallbackToDestructiveMigration()
-            .build()
 
 
         val databaseModule = module {
@@ -38,6 +32,7 @@ class WeatherApplication : Application() {
             single<MemorableDaysDataSource> { LocalMemorableDaysDataSource(get()) }
             single { WeatherRepository() }
             viewModel { HomeViewModel(get())}
+            viewModel { MemorableDayDetailViewModel(get())}
             viewModel {WeatherViewModel(get(), get())}
         }
         val appModule = module {

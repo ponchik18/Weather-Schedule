@@ -10,6 +10,7 @@ import androidx.compose.material.icons.filled.Star
 import org.koin.androidx.viewmodel.ext.android.getViewModel
 import pmislabs.bovkunmaxim.bsuir.weatherschedule.ui.components.WeatherTrackerContent
 import pmislabs.bovkunmaxim.bsuir.weatherschedule.ui.viewmodel.HomeViewModel
+import pmislabs.bovkunmaxim.bsuir.weatherschedule.ui.viewmodel.MemorableDayDetailViewModel
 import pmislabs.bovkunmaxim.bsuir.weatherschedule.ui.viewmodel.WeatherViewModel
 
 class MainActivity : ComponentActivity() {
@@ -30,8 +31,9 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         val homeViewModel =  getViewModel<HomeViewModel>()
         val weatherViewModel =  getViewModel<WeatherViewModel>()
+        val memorableDayDetailViewModel = getViewModel<MemorableDayDetailViewModel>()
         setContent {
-            WeatherTrackerContent(homeViewModel, weatherViewModel)
+            WeatherTrackerContent(homeViewModel, weatherViewModel, memorableDayDetailViewModel)
         }
     }
 }

@@ -84,7 +84,7 @@ ktor-client-json = { group = "io.ktor", name = "ktor-client-json", version.ref =
 accompanist-swiperefresh = { group = "com.google.accompanist", name = "accompanist-swiperefresh", version = "0.27.0" }
 
 koin-android-architecture = { group = "io.insert-koin", name= "koin-ktor", version.ref ="koin" }
-
+koin-androidx-compose = { group = "io.insert-koin", name= "koin-androidx-compose", version ="3.3.0" }
 [plugins]
 com-android-application = { id = "com.android.application", version.ref = "agp" }
 com-google-devtools-ksp = {id = 'com.google.devtools.ksp', version = '1.6.10-1.0.2'}
